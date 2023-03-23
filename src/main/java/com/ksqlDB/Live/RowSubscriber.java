@@ -23,7 +23,7 @@ public class RowSubscriber implements Subscriber<Row> {
     @Override
     public synchronized void onNext(Row row) {
         System.out.println("Received a row!");
-        System.out.println("Row: " + row.getValue("PROFILEID"));
+        System.out.println("Row: " + row.getValue("ROWTIME"));
 
         // Request the next row
         subscription.request(1);
