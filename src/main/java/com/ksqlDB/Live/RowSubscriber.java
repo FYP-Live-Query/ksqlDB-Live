@@ -22,8 +22,10 @@ public class RowSubscriber implements Subscriber<Row> {
 
     @Override
     public synchronized void onNext(Row row) {
-        System.out.println("Received a row!");
-        System.out.println("Row: " + row.getValue("ROWTIME"));
+        long current = System.currentTimeMillis();
+        long updated= (long) row.getValue("ROWTIME");
+        long latency = current - updated;
+        System.out.println("latency: " + latency );
 
         // Request the next row
         subscription.request(1);
