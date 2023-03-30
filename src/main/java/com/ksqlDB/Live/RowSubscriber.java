@@ -4,6 +4,9 @@ import io.confluent.ksql.api.client.Row;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 public class RowSubscriber implements Subscriber<Row> {
 
     private Subscription subscription;
