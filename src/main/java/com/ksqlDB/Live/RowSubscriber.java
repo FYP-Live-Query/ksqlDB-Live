@@ -23,7 +23,15 @@ public class RowSubscriber implements Subscriber<Row> {
     @Override
     public synchronized void onNext(Row row) {
         long current = System.currentTimeMillis();
-        long updated= (long) row.getValue("ROWTIME");
+        String datetime = row.getValue("EVENTTIMESTAMP").toString();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        Date date = null;
+        try {
+            date = sdf.parse(datetime);
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+        long updated = date.getTime();
         long latency = current - updated;
         System.out.println("latency: " + latency );
 

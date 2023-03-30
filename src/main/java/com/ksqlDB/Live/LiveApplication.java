@@ -20,7 +20,7 @@ public class LiveApplication {
 
 		// Send requests with the client by following the other examples
 
-		client.streamQuery("SELECT *, ROWTIME FROM networktraffic EMIT CHANGES;")
+		client.streamQuery("SELECT * FROM network EMIT CHANGES;")
 				.thenAccept(streamedQueryResult -> {
 					System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
 
