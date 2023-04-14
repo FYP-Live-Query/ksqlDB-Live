@@ -1,6 +1,5 @@
 package com.ksqlDB.Live;
 
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
@@ -24,7 +23,7 @@ public class LiveApplication {
 				.thenAccept(streamedQueryResult -> {
 					System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
 
-					RowSubscriber subscriber = new RowSubscriber();
+					RowSubscriber subscriber = new RowSubscriber(streamedQueryResult.queryID());
 					streamedQueryResult.subscribe(subscriber);
 				}).exceptionally(e -> {
 					System.out.println("Request failed: " + e);

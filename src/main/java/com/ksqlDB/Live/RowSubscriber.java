@@ -6,12 +6,18 @@ import org.reactivestreams.Subscription;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Date;
+import io.micrometer.core.instrument.MeterRegistry;
 public class RowSubscriber implements Subscriber<Row> {
 
     private Subscription subscription;
+    private MeterRegistry meterRegistry;
 
-    public RowSubscriber() {
+    private final String prometheus_query;
+
+    public RowSubscriber(String prometheus_query) {
+        this.prometheus_query=prometheus_query;
     }
 
     @Override
@@ -36,6 +42,7 @@ public class RowSubscriber implements Subscriber<Row> {
         }
         long updated = date.getTime();
         long latency = current - updated;
+        meterRegistry.timer(prometheus_query).record(Duration.ofMillis(latency));
         System.out.println("latency: " + latency );
 
         // Request the next row
@@ -50,6 +57,10 @@ public class RowSubscriber implements Subscriber<Row> {
     @Override
     public synchronized void onComplete() {
         System.out.println("Query has ended.");
+    }
+
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
     }
 }
 
