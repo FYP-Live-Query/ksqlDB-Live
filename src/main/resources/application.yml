@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ksqldb
+  router:
+    static-resources:
+      default:
+        enabled: true
+        paths: classpath:public
+        mapping: /**
+
