@@ -14,10 +14,11 @@ public class RowSubscriber implements Subscriber<Row> {
     private Subscription subscription;
     private MeterRegistry meterRegistry;
 
-    private final String prometheus_query;
+    private final String userId;
 
-    public RowSubscriber(String prometheus_query) {
-        this.prometheus_query=prometheus_query;
+    public RowSubscriber(String userId, MeterRegistry meterRegistry) {
+        this.userId = userId;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -41,8 +42,10 @@ public class RowSubscriber implements Subscriber<Row> {
             throw new RuntimeException(e);
         }
         long updated = date.getTime();
+//        System.out.println("Updated: "+ updated);
+//        System.out.println("Current: "+ current);
         long latency = current - updated;
-        meterRegistry.timer(prometheus_query).record(Duration.ofMillis(latency));
+        meterRegistry.timer(userId).record(Duration.ofMillis(latency));
         System.out.println("latency: " + latency );
 
         // Request the next row
