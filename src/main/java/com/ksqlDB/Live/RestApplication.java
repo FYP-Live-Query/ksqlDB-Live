@@ -3,6 +3,8 @@ package com.ksqlDB.Live;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
 import io.confluent.ksql.api.client.Row;
+
+import io.confluent.ksql.api.client.StreamedQueryResult;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,26 +16,28 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+
+import java.util.concurrent.*;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootApplication
 @RestController
 public class RestApplication {
+
     public static String KSQLDB_SERVER_HOST = "172.174.71.151";
     public static int KSQLDB_SERVER_HOST_PORT = 8088;
     private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
 
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     public AtomicInteger iterateID = new AtomicInteger(0);
+    private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
     private final MeterRegistry meterRegistry;
 
     public RestApplication(MeterRegistry meterRegistry) {
         executorService.scheduleAtFixedRate(this::writeLatencyValuesToCsv, 1, 1, TimeUnit.MINUTES);
         this.meterRegistry = meterRegistry;
+        ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     }
 
     private synchronized void writeLatencyValuesToCsv() {
@@ -73,7 +77,7 @@ public class RestApplication {
 
     @GetMapping("/ksql")
     @CrossOrigin
-    public void runQuery() {
+    public void runQuery() throws ExecutionException, InterruptedException {
         //		SpringApplication.run(LiveApplication.class, args);
         StringBuilder str1 = new StringBuilder("id-");
         long start=System.currentTimeMillis();
@@ -83,8 +87,6 @@ public class RestApplication {
                 .setHost(KSQLDB_SERVER_HOST)
                 .setPort(KSQLDB_SERVER_HOST_PORT);
         Client client = Client.create(options);
-
-        // Send requests with the client by following the other examples
 
         client.streamQuery("SELECT ip,ROWTIME FROM network EMIT CHANGES;")
                 .thenAccept(streamedQueryResult -> {
@@ -96,7 +98,6 @@ public class RestApplication {
                     System.out.println("Request failed: " + e);
                     return null;
                 });
-
         // Terminate any open connections and close the client
 //		client.close();
     }
