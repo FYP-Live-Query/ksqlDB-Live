@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RestController
 public class RestApplication {
 
-    public static String KSQLDB_SERVER_HOST = "10.8.100.246";
+    public static String KSQLDB_SERVER_HOST = "172.174.71.151";
     public static int KSQLDB_SERVER_HOST_PORT = 8088;
     public AtomicInteger iterateID = new AtomicInteger(0);
     private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
@@ -91,7 +91,7 @@ public class RestApplication {
                 throw new RuntimeException(e);
             }
 
-            while (Thread.interrupted()) {
+            while (true) {
                 // Block until a new row is available
                 Row row = streamedQueryResult.poll();
                 if (row != null) {
