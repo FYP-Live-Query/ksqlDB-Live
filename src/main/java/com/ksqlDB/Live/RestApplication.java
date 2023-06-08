@@ -3,6 +3,7 @@ package com.ksqlDB.Live;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
 import io.confluent.ksql.api.client.Row;
+
 import io.confluent.ksql.api.client.StreamedQueryResult;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,7 +16,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+
 import java.util.concurrent.*;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootApplication
@@ -24,14 +27,17 @@ public class RestApplication {
 
     public static String KSQLDB_SERVER_HOST = "172.174.71.151";
     public static int KSQLDB_SERVER_HOST_PORT = 8088;
+    private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
+
+    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     public AtomicInteger iterateID = new AtomicInteger(0);
     private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
     private final MeterRegistry meterRegistry;
 
     public RestApplication(MeterRegistry meterRegistry) {
+        executorService.scheduleAtFixedRate(this::writeLatencyValuesToCsv, 1, 1, TimeUnit.MINUTES);
         this.meterRegistry = meterRegistry;
         ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-        executorService.scheduleAtFixedRate(this::writeLatencyValuesToCsv, 1, 1, TimeUnit.MINUTES);
     }
 
     private synchronized void writeLatencyValuesToCsv() {
@@ -82,34 +88,17 @@ public class RestApplication {
                 .setPort(KSQLDB_SERVER_HOST_PORT);
         Client client = Client.create(options);
 
-        // Send requests with the client by following the other examples
-        Thread streamingThread = new Thread(() -> {
-            StreamedQueryResult streamedQueryResult = null;
-            try {
-                streamedQueryResult = client.streamQuery("SELECT ip,ROWTIME FROM network EMIT CHANGES;").get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+        client.streamQuery("SELECT ip,ROWTIME FROM network EMIT CHANGES;")
+                .thenAccept(streamedQueryResult -> {
+                    System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
 
-            while (true) {
-                // Block until a new row is available
-                Row row = streamedQueryResult.poll();
-                if (row != null) {
-                    long current = System.currentTimeMillis();
-                    long updated = (long) row.getValue("ROWTIME");
-                    // skip processing rows that were created before the query started
-                    if (updated > start) {
-                        long latency = current - updated;
-                        latencyValues.add(latency);
-                        meterRegistry.timer(userId).record(Duration.ofMillis(latency));
-                        System.out.println("latency: " + latency);
-                    }
-                    // Request the next row
-                } else {
-                    System.out.println("Query has ended.");
-                }
-            }
-        });
-        streamingThread.start();
+                    RowSubscriber subscriber = new RowSubscriber(userId, this.meterRegistry,start,latencyValues);
+                    streamedQueryResult.subscribe(subscriber);
+                }).exceptionally(e -> {
+                    System.out.println("Request failed: " + e);
+                    return null;
+                });
+        // Terminate any open connections and close the client
+//		client.close();
     }
 }
