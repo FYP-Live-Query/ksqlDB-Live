@@ -12,6 +12,7 @@ import java.util.Date;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -21,7 +22,7 @@ public class RowSubscriber implements Subscriber<Row> {
     private Subscription subscription;
     private MeterRegistry meterRegistry;
     private final long start;
-    private final List<Long> latencyValues = new ArrayList<>();
+    private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     private final String userId;
@@ -65,7 +66,7 @@ public class RowSubscriber implements Subscriber<Row> {
         subscription.request(1);
     }
 
-    private void writeLatencyValuesToCsv() {
+    private synchronized void writeLatencyValuesToCsv() {
         try {
             // Calculate average and 90th percentile of latency values
             double averageLatency = latencyValues.stream()
