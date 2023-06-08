@@ -22,16 +22,17 @@ public class RowSubscriber implements Subscriber<Row> {
     private Subscription subscription;
     private MeterRegistry meterRegistry;
     private final long start;
-    private final List<Long> latencyValues = new CopyOnWriteArrayList<>();
-    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private final List<Long> latencyValues;
+
 
     private final String userId;
 
-    public RowSubscriber(String userId, MeterRegistry meterRegistry,long start) {
+    public RowSubscriber(String userId, MeterRegistry meterRegistry,long start, List<Long> latencyValues) {
         this.userId = userId;
         this.meterRegistry = meterRegistry;
         this.start =start;
-        executorService.scheduleAtFixedRate(this::writeLatencyValuesToCsv, 1, 1, TimeUnit.MINUTES);
+        this.latencyValues = latencyValues;
+
     }
 
     @Override
@@ -46,14 +47,6 @@ public class RowSubscriber implements Subscriber<Row> {
     @Override
     public synchronized void onNext(Row row) {
         long current = System.currentTimeMillis();
-//        String datetime = row.getValue("EVENTTIMESTAMP").toString();
-//        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-//        Date date = null;
-//        try {
-//            date = sdf.parse(datetime);
-//        } catch (ParseException e) {
-//            throw new RuntimeException(e);
-//        }
         long updated = (long) row.getValue("ROWTIME");
         // skip processing rows that were created before the query started
         if(updated > start){
@@ -66,40 +59,6 @@ public class RowSubscriber implements Subscriber<Row> {
         subscription.request(1);
     }
 
-    private synchronized void writeLatencyValuesToCsv() {
-        try {
-            // Calculate average and 90th percentile of latency values
-            double averageLatency = latencyValues.stream()
-                    .mapToLong(Long::longValue)
-                    .average()
-                    .orElse(Double.NaN);
-            double percentile95Latency = latencyValues.stream()
-                    .sorted()
-                    .skip((long) (latencyValues.size() * 0.95))
-                    .findFirst()
-                    .orElse(0L);
-            double percentile99Latency = latencyValues.stream()
-                    .sorted()
-                    .skip((long) (latencyValues.size() * 0.99))
-                    .findFirst()
-                    .orElse(0L);
-            // Write average and 90th percentile of latency values to CSV file
-            FileWriter csvWriter = new FileWriter("latency_values_ksql.csv", true);
-            csvWriter.append(Double.toString(averageLatency));
-            csvWriter.append(",");
-            csvWriter.append(Double.toString(percentile95Latency));
-            csvWriter.append(",");
-            csvWriter.append(Double.toString(percentile99Latency));
-            csvWriter.append("\n");
-            csvWriter.flush();
-            csvWriter.close();
-
-            // Clear the latency values list
-            latencyValues.clear();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     @Override
     public synchronized void onError(Throwable t) {
         System.out.println("Received an error: " + t);
