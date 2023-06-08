@@ -109,7 +109,7 @@ public class RestApplication {
                     System.out.println("Query has ended.");
                 }
             }
-        }, "streaming Thread");
+        });
         streamingThread.start();
     }
 }
