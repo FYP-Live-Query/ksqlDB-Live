@@ -18,7 +18,7 @@ public class RestApplication {
     public static String KSQLDB_SERVER_HOST = "10.8.100.246";
     public static int KSQLDB_SERVER_HOST_PORT = 8088;
     public AtomicInteger iterateID = new AtomicInteger(0);
-    private MeterRegistry meterRegistry;
+    private final MeterRegistry meterRegistry;
 
     public RestApplication(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
@@ -29,6 +29,7 @@ public class RestApplication {
     public void runQuery() {
         //		SpringApplication.run(LiveApplication.class, args);
         StringBuilder str1 = new StringBuilder("id-");
+        long start=System.currentTimeMillis();
         str1.append(iterateID.incrementAndGet());
         String userId = str1.toString();
         ClientOptions options = ClientOptions.create()
@@ -38,11 +39,11 @@ public class RestApplication {
 
         // Send requests with the client by following the other examples
 
-        client.streamQuery("SELECT * FROM network EMIT CHANGES;")
+        client.streamQuery("SELECT ip,ROWTIME FROM network EMIT CHANGES;")
                 .thenAccept(streamedQueryResult -> {
                     System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
 
-                    RowSubscriber subscriber = new RowSubscriber(userId, this.meterRegistry);
+                    RowSubscriber subscriber = new RowSubscriber(userId, this.meterRegistry,start);
                     streamedQueryResult.subscribe(subscriber);
                 }).exceptionally(e -> {
                     System.out.println("Request failed: " + e);
